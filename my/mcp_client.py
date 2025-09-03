@@ -4,6 +4,11 @@ modified from https://modelcontextprotocol.io/quickstart/client  in tab 'python'
 import asyncio
 from contextlib import AsyncExitStack
 import os
+# typing模块中的类型注解说明：
+# List: 来自typing模块的泛型类型，用于类型注解，支持指定元素类型，如List[str]
+# list: Python内置的列表类型，实际的数据结构
+# 区别：List用于类型提示，list用于创建实际对象
+# 在Python 3.9+中，可以直接用 list[str] 替代 List[str]
 from typing import Optional, List, Dict, Any, Tuple
 from mcp import Tool, ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -164,6 +169,13 @@ async def example() -> None:
     
     # 步骤1: 定义MCP服务器配置列表
     # 配置两个不同的MCP服务器：文件系统服务器和网络请求服务器
+    # 
+    # 类型注解解释：List[Tuple[str, str]]
+    # - List: 来自typing模块的泛型类型，用于类型提示（Type Hinting）
+    # - list: Python内置类型，用于创建实际的列表对象，如 list() 或 []
+    # - List[Tuple[str, str]] 表示：这是一个列表，包含多个元组，每个元组包含两个字符串
+    # - 等价写法（Python 3.9+）: list[tuple[str, str]]
+    # - 实际创建对象使用的是 [] ，这是 list 类型的字面量语法
     server_configs: List[Tuple[str, str]] = [
         (
             "filesystem",  # 服务器名称：文件系统操作服务器

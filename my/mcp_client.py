@@ -3,6 +3,7 @@ modified from https://modelcontextprotocol.io/quickstart/client  in tab 'python'
 """
 import asyncio
 from contextlib import AsyncExitStack
+import contextlib
 import os
 # typing模块中的类型注解说明：
 # List: 来自typing模块的泛型类型，用于类型注解，支持指定元素类型，如List[str]
@@ -10,10 +11,16 @@ import os
 # 区别：List用于类型提示，list用于创建实际对象
 # 在Python 3.9+中，可以直接用 list[str] 替代 List[str]
 from typing import Optional, List, Dict, Any, Tuple
+import typing
 from mcp import Tool, ClientSession, StdioServerParameters
+# import mcp.cli
+import mcp.client
+import mcp.client.session
 from mcp.client.stdio import stdio_client
+import mcp
+import mcp.client.stdio
 from mcp.types import ListToolsResult
-from openai import AsyncOpenAI
+# from openai import AsyncOpenAI
 from dataclasses import dataclass, field
 
 from openai.types import FunctionDefinition
@@ -31,6 +38,8 @@ import utils.info
 from utils.pretty import log_title
 import utils
 import utils.pretty
+
+import try_mcp_client
 
 load_dotenv()  # 读取.env里的API等信息
 # 直接从chat_openai.py里拿过来 from import
@@ -67,17 +76,18 @@ class MCPClient:
             tools: 从服务器获取的工具列表
         """
         # MCP 会话管理
-        self.session: Optional[ClientSession] = None
-        self.exit_stack: AsyncExitStack = AsyncExitStack()
+        self.session: mcp.client.session.ClientSession | None
+        # self.session: typing.Optional[mcp.client.session.ClientSession] = None # `Optional[X]` 等价于 `X | None`
+        self.exit_stack: contextlib.AsyncExitStack = contextlib.AsyncExitStack()
         
         # 客户端基本信息
         self.name: str = name                    # 客户端标识名称
         self.command: str = command              # 服务器启动命令（如: "node", "python"）
-        self.args: List[str] = args              # 命令参数列表
+        self.args: typing.List[str] = args              # 命令参数列表
         self.version: str = version              # 客户端版本号
         
         # 工具管理
-        self.tools: List[Tool] = []              # 存储从服务器获取的可用工具列表
+        self.tools: typing.List[Tool] = []              # 存储从服务器获取的可用工具列表
     
     async def init(self) -> None:
         """初始化客户端，连接到服务器"""
@@ -94,24 +104,23 @@ class MCPClient:
         """
         try:
             # 创建服务器参数配置
-            server_params: StdioServerParameters = StdioServerParameters(
+            server_params: mcp.client.stdio.StdioServerParameters = StdioServerParameters(
                 command=self.command,
                 args=self.args,
                 env=None
             )
             
             # 创建标准输入输出传输通道
-            stdio_transport: Tuple[Any, Any] = await self.exit_stack.enter_async_context(
-                stdio_client(server_params)
+            stdio_transport: typing.Tuple[Any, Any] = await self.exit_stack.enter_async_context(
+                mcp.client.stdio.stdio_client(server_params)
             )
-            
             # 获取读写接口
-            self.stdio: Any
-            self.write: Any
+            # self.stdio: Any
+            # self.write: Any
             self.stdio, self.write = stdio_transport
             
             # 创建客户端会话
-            self.session: ClientSession = await self.exit_stack.enter_async_context(
+            self.session: mcp.client.session.ClientSession = await self.exit_stack.enter_async_context(
                 ClientSession(self.stdio, self.write)
             )
             
@@ -119,11 +128,14 @@ class MCPClient:
             await self.session.initialize()
             
             # 获取服务器提供的工具列表
-            response: ListToolsResult = await self.session.list_tools()
+            response: mcp.types.ListToolsResult = await self.session.list_tools()
             self.tools: List[Tool] = response.tools
             
             # 打印连接成功信息和可用工具
-            rprint(f"\n✅ Connected to MCP server: {self.name}")
+            rprint(f"\n✅ Connected to MCP server: ") #{self.name}
+            # tool_names = []
+            # for tool in self.tools:
+            #     tool_names.append(tool.name)
             rprint("Available tools:", [tool.name for tool in self.tools])
             
         except Exception as error:
@@ -200,7 +212,7 @@ async def example() -> None:
         
         # 步骤2.3: 创建MCP客户端实例
         # 使用解析出的命令和参数初始化客户端对象
-        mcp_client: MCPClient = MCPClient(
+        mcp_client: try_mcp_client.MCPClient = MCPClient(
             name=mcp_name,    # 设置客户端名称
             command=command,  # 设置服务器启动命令
             args=args,        # 设置命令参数

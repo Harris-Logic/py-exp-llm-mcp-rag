@@ -212,10 +212,13 @@ async def example() -> None:
         
         # 步骤2.3: 创建MCP客户端实例
         # 使用解析出的命令和参数初始化客户端对象
-        mcp_client: try_mcp_client.MCPClient = MCPClient(
-            name=mcp_name,    # 设置客户端名称
-            command=command,  # 设置服务器启动命令
-            args=args,        # 设置命令参数
+        mcp_client: try_mcp_client.MCPClient = try_mcp_client.MCPClient(
+            mcp_name,
+            command,
+            args,
+            # name=mcp_name,    # 设置客户端名称
+            # command=command,  # 设置服务器启动命令
+            # args=args,        # 设置命令参数
         )
         
         # 步骤2.4: 初始化客户端连接

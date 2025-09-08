@@ -160,7 +160,7 @@ class MCPClient:
         Raises:
             ValueError: 如果工具不存在或调用失败
         """
-        if not self.session:
+        if self.session is None:
             raise ValueError("Not connected to server")
         try:
             result: Dict[str, Any] = await self.session.call_tool(name, params)

@@ -71,13 +71,14 @@ class MCPClient:
     async def call_tools(
             self,
             tool_name: str,
-            params: typing.Dict[str, any],
-    ) -> typing.Dict[str, any]:
-        if not self.mcp_session:
+            params: dict[str, typing.Any],
+    ): #-> typing.Dict[str, any]:
+        if self.mcp_session is None:
             raise ValueError("MCP session is not initialized")
         try:
-            tool_call_result: typing.Dict[str, any] = await self.mcp_session.call_tool(tool_name, params)
-            return tool_call_result
+            return await self.mcp_session.call_tool(tool_name, params)
+            # tool_call_result: dict[str, typing.Any] = await self.mcp_session.call_tool(tool_name, params)
+            # return tool_call_result
         except Exception as error:
             raise ValueError(f"Tool call failed for {tool_name}, {error}") from error
         

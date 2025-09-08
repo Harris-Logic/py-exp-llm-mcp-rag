@@ -1,6 +1,7 @@
 import asyncio
 import os
 from mcp import Tool
+import mcp
 from openai import NOT_GIVEN, AsyncOpenAI
 from dataclasses import dataclass, field
 
@@ -40,7 +41,7 @@ class ChatOpenAIChatResponse(BaseModel):
 class AsyncChatOpenAI:
     model: str
     messages: list[ChatCompletionMessageParam] = field(default_factory=list)
-    tools: list[Tool] = field(default_factory=list)
+    tools: list[mcp.Tool] = field(default_factory=list)
 
     system_prompt: str = ""
     context: str = ""

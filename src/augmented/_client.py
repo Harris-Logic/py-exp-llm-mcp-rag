@@ -75,7 +75,11 @@ class MCPClient:
         self.tools = response.tools
         rprint("\nConnected to server with tools:", [tool.name for tool in self.tools])
 
-    async def call_tool(self, name: str, params: dict[str, Any]):
+    async def call_tool(
+            self, 
+            name: str,
+            params: dict[str, Any]
+    ):
         return await self.session.call_tool(name, params)
 
 

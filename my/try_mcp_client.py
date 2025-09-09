@@ -62,8 +62,11 @@ class MCPClient:
             server_response: mcp.types.ListToolsResult = await self.mcp_session.list_tools()
             self.tools = server_response.tools
 
-            utils.pretty.log_title(f"\n✅ Connected to MCP server with tool:", [tool.name for tool in self.tools]) #rich.print
-
+            utils.pretty.log_title(
+                f"\n✅ Connected to MCP server with tool: {', '.join([tool.name for tool in self.tools])}"
+                #    , [tool.name for tool in self.tools]
+            ) #rich.print
+                 
         except Exception as error:
             rich.print(f"❌ Failed to connect to MCP server:{error}")
             raise ConnectionError(f"Failed to connect to MCP server:{error}") from error

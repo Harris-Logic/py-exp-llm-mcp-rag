@@ -1,0 +1,46 @@
+{
+  // Python语言服务器配置
+  "python.languageServer": "Pylance",
+  
+  // 类型检查模式设置
+  // 可选值: "off" - 关闭, "basic" - 基本, "strict" - 严格
+  "python.analysis.typeCheckingMode": "basic",
+  
+  // 诊断严重性覆盖设置
+  // 控制悬停提示的详细程度
+  "python.analysis.diagnosticSeverityOverrides": {
+    // 导入相关
+    "reportMissingImports": "information",      // 缺失导入 - 信息级别
+    "reportMissingModuleSource": "warning",     // 缺失模块源 - 警告级别
+    "reportUnusedImport": "none",               // 未使用导入 - 不显示
+    
+    // 变量相关
+    "reportUndefinedVariable": "warning",       // 未定义变量 - 警告级别
+    "reportUnusedVariable": "information",      // 未使用变量 - 信息级别
+    
+    // 类型相关
+    "reportGeneralTypeIssues": "warning",       // 一般类型问题 - 警告级别
+    "reportOptionalSubscript": "information",   // 可选下标 - 信息级别
+    "reportOptionalMemberAccess": "information", // 可选成员访问 - 信息级别
+    
+    // 函数相关
+    "reportMissingTypeStubs": "none",           // 缺失类型存根 - 不显示
+    "reportArgumentType": "information",        // 参数类型问题 - 信息级别
+    "reportReturnType": "information",          // 返回值类型问题 - 信息级别
+    
+    // 其他诊断
+    "reportShadowedImports": "none",            // 影子导入 - 不显示
+    "reportPrivateImportUsage": "none",         // 私有导入使用 - 不显示
+    "reportUnusedExpression": "none"            // 未使用表达式 - 不显示
+  },
+  
+  // 悬停提示设置
+  "python.analysis.completeFunctionParens": true,
+  "python.analysis.autoImportCompletions": true,
+  
+  // 其他有用的Python设置
+  "python.analysis.autoSearchPaths": true,
+  "python.analysis.indexing": true,
+  "python.analysis.inlayHints.functionReturnTypes": true,
+  "python.analysis.inlayHints.variableTypes": true
+}

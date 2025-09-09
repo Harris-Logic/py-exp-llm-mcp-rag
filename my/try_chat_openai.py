@@ -20,7 +20,7 @@ import openai.types.chat.completions
 # from augmented.chat_openai import ToolCallFunction
 # from augmented.chat_openai import ToolCallFunction
 import utils
-import utils.pretty
+from utils.pretty import log_title
 import rich
 from typing import Dict, Any
 import dataclasses
@@ -60,7 +60,7 @@ import openai.types.chat
 @dataclasses.dataclass
 class AsyncChatOpenAI:
     model: str
-    messages: list[openai.types.chat.ChatCompletionMessageParam]=dataclasses.field(default_factory=list)
+    messages: list[ChatCompletionMessageParam]=dataclasses.field(default_factory=list)
     tools: list[mcp.Tool]=dataclasses.field(default_factory=list)
     
     async_llm: AsyncOpenAI=dataclasses.field(init=False)
@@ -77,7 +77,7 @@ class AsyncChatOpenAI:
         self.model = model
         # self.messages : List[Dict[str,Any]] = []
         # self.tools = tools or []
-        self.messages: list[openai.types.chat.ChatCompletionMessageParam] = []
+        self.messages: list[ChatCompletionMessageParam] = []
         self.tools: list[mcp.Tool] = tools or []
 
         if system_prompt:
@@ -102,7 +102,7 @@ class AsyncChatOpenAI:
             prompt: str = "",
             print_llm_output: bool = True,
     ) -> ChatOpenAIChatResponse:
-        utils.pretty.log_title("CHAT")
+        log_title("CHAT")
         if prompt is not None:
             self.messages.append({"role":"user", "content":prompt})
 
@@ -117,7 +117,7 @@ class AsyncChatOpenAI:
         tool_calls: list[ToolCall] = []
         print_llm_output = False
         # param_tools = self.get_tool_definition()
-        utils.pretty.log_title("RESPONSE")
+        log_title("RESPONSE")
 
         async for chunk in stream:
             delta = chunk.choices[0].delta
@@ -143,25 +143,30 @@ class AsyncChatOpenAI:
                         current_call.function.name += tool_call_chunk.function.name
                     if tool_call_chunk.function and tool_call_chunk.function.arguments:
                         current_call.function.arguments += tool_call_chunk.function.arguments
-        # 只有在有tool_calls时才添加tool_calls字段
-        assistant_message = {
+        # 构建助手消息，只有当有工具调用时才包含tool_calls字段
+        assistant_message: Dict[str, Any] = {
             "role": "assistant",
             "content": content,
         }
         
-        if tool_calls and any(tc.function.name for tc in tool_calls):
-            assistant_message["tool_calls"] = [
-                {
-                    "type": "function",
-                    "id": tc.id,
-                    "function": {
-                        "name": tc.function.name,
-                        "arguments": tc.function.arguments,
-                    },
-                }
-                for tc in tool_calls
-            ]
-        self.messages.append(assistant_message)
+        # 只有当有有效的工具调用时才添加tool_calls字段
+        valid_tool_calls = [
+            {
+                "type": "function",
+                "id": tc.id,
+                "function": {
+                    "name": tc.function.name,
+                    "arguments": tc.function.arguments,
+                },
+            }
+            for tc in tool_calls
+            if tc.function.name  # 只包含有名称的tool calls
+        ]
+        
+        if valid_tool_calls:
+            assistant_message["tool_calls"] = valid_tool_calls
+            
+        self.messages.append(assistant_message)  # type: ignore
 
         # self.messages.append({
         #     "role": "assistant",

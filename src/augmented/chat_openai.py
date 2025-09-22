@@ -5,11 +5,11 @@ import mcp
 from openai import NOT_GIVEN, AsyncOpenAI
 from dataclasses import dataclass, field
 
-# from openai.types import FunctionDefinition
 from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionToolParam,
 )
+# from openai.types import FunctionDefinition
 from openai.types.shared_params.function_definition import FunctionDefinition
 import dotenv
 from pydantic import BaseModel

@@ -16,20 +16,23 @@ from augmented.utils.info import DEFAULT_MODEL_NAME, PROJECT_ROOT_DIR  # 默认�
 PRETTY_LOGGER = pretty.ALogger("[Agent]")
 
 
+# Agent类，负责协调LLM和MCP工具的执行
 @dataclass
 class Agent:
-    mcp_clients: list[MCPClient]
-    model: str
-    llm: AsyncChatOpenAI | None = None
-    system_prompt: str = ""
-    context: str = ""
+    """AI代理类，协调语言模型和工具调用的执行"""
+    
+    mcp_clients: list[MCPClient]  # MCP客户端列表，提供各种工具功能
+    model: str  # 使用的AI模型名称
+    llm: AsyncChatOpenAI | None = None  # 语言模型实例，初始为None
+    system_prompt: str = ""  # 系统提示词
+    context: str = ""  # 上下文信息
 
+    # 初始化Agent，设置LLM和工具
     async def init(self) -> None:
-        """
-        初始化Agent，设置LLM和工具
-        """
+        """初始化Agent，设置语言模型和可用工具"""
         PRETTY_LOGGER.title("INIT LLM&TOOLS")  # 记录初始化开始
         tools = []  # 初始化工具列表
+        
         # 遍历所有MCP客户端并初始化
         for mcp_client in self.mcp_clients:
             await mcp_client.init()  # 异步初始化MCP客户端
@@ -43,10 +46,9 @@ class Agent:
             context=self.context,  # 上下文信息
         )
 
+    # 清理Agent资源，关闭MCP客户端连接
     async def cleanup(self) -> None:
-        """
-        清理Agent资源，关闭MCP客户端连接
-        """
+        """清理Agent资源，关闭所有MCP客户端连接"""
         PRETTY_LOGGER.title("CLEANUP LLM&TOOLS")  # 记录清理开始
 
         # 循环处理所有MCP客户端，确保正确清理
@@ -57,16 +59,14 @@ class Agent:
             mcp_client = self.mcp_clients.pop()  # 从列表中移除并获取最后一个客户端
             await mcp_client.cleanup()  # 异步清理MCP客户端资源
 
+    # 公开的调用方法，转发到内部实现
     async def invoke(self, prompt: str) -> str | None:
-        """
-        公开的调用方法，转发到内部实现
-        """
+        """公开调用方法，处理用户输入并返回响应"""
         return await self._invoke(prompt)
 
+    # 核心调用逻辑：处理用户输入，执行工具调用循环
     async def _invoke(self, prompt: str) -> str | None:
-        """
-        核心调用逻辑：处理用户输入，执行工具调用循环
-        """
+        """核心调用逻辑：处理用户输入，执行工具调用循环"""
         if self.llm is None:
             raise ValueError("llm not call .init()")  # 检查LLM是否已初始化
         
@@ -122,10 +122,9 @@ class Agent:
                 return chat_resp.content
 
 
+# Agent使用示例：演示如何配置和使用Agent进行网页爬取和内容保存
 async def example() -> None:
-    """
-    Agent使用示例：演示如何配置和使用Agent进行网页爬取和内容保存
-    """
+    """示例函数，演示Agent的基本用法和配置"""
     enabled_mcp_clients = []  # 启用的MCP客户端列表
     agent = None  # Agent实例
     
@@ -163,8 +162,7 @@ async def example() -> None:
             await agent.cleanup()
 
 
+# 程序主入口：运行示例函数
 if __name__ == "__main__":
-    """
-    程序主入口：运行示例函数
-    """
+    """程序主入口点，运行Agent示例"""
     asyncio.run(example())  # 运行异步示例函数

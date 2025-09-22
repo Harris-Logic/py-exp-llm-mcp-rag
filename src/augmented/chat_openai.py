@@ -1,15 +1,16 @@
 import asyncio
 import os
-from mcp import Tool
+# from mcp import Tool
 import mcp
 from openai import NOT_GIVEN, AsyncOpenAI
 from dataclasses import dataclass, field
 
-from openai.types import FunctionDefinition
+# from openai.types import FunctionDefinition
 from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionToolParam,
 )
+from openai.types.shared_params.function_definition import FunctionDefinition
 import dotenv
 from pydantic import BaseModel
 from rich import print as rprint
@@ -59,7 +60,7 @@ class AsyncChatOpenAI:
 
     llm: AsyncOpenAI = field(init=False)  # OpenAI客户端实例
 
-    # 初始化后处理，设置OpenAI客户端并添加系统提示和上下文
+    # 延迟初始化：初始化后处理，设置OpenAI客户端并添加系统提示和上下文
     def __post_init__(self) -> None:
         """初始化OpenAI客户端并设置初始消息"""
         # 创建OpenAI异步客户端实例
@@ -135,24 +136,22 @@ class AsyncChatOpenAI:
                         if len(tool_calls) <= tool_call.index:
                             tool_calls.append(ToolCall())
                         
-                        this_tool_call = tool_calls[tool_call.index]
+                        this_tool_call = tool_calls[tool_call.index] # 获取列表中的对象引用
                         
                         # 处理工具调用ID
                         if tool_call.id:
+                            # 修改 this_tool_call 会直接影响列表中的对象
+                            # tool_calls[tool_call.index].id 也会被同步修改
                             this_tool_call.id += tool_call.id or ""
                         
                         # 处理函数信息
                         if tool_call.function:
                             # 处理函数名称
                             if tool_call.function.name:
-                                this_tool_call.function.name += (
-                                    tool_call.function.name or ""
-                                )
+                                this_tool_call.function.name += tool_call.function.name or ""
                             # 处理函数参数
                             if tool_call.function.arguments:
-                                this_tool_call.function.arguments += (
-                                    tool_call.function.arguments or ""
-                                )
+                                this_tool_call.function.arguments += tool_call.function.arguments or ""
         
         # 如果打印了输出，添加换行符
         if printed_llm_output:
@@ -186,12 +185,18 @@ class AsyncChatOpenAI:
     # 获取工具定义，将MCP工具转换为OpenAI API所需的格式
     def get_tools_definition(self) -> list[ChatCompletionToolParam]:
         """将MCP工具转换为OpenAI API兼容的工具定义格式"""
+        # if self.tools is None:
+        #     # return NOT_GIVEN
+        #     return []
+
+        # else:
         return [
             ChatCompletionToolParam(
                 type="function",  # 工具类型为函数
                 function=FunctionDefinition(
                     name=t.name,  # 工具名称
-                    description=t.description,  # 工具描述
+                    # description=t.description ,  # 工具描述，处理None值
+                    description=t.description or "",  # 工具描述，处理None值
                     parameters=t.inputSchema,  # 工具输入参数模式
                 ),
             )

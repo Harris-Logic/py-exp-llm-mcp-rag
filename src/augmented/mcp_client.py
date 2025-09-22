@@ -19,7 +19,7 @@ import mcp.client.session
 from mcp.client.stdio import stdio_client
 import mcp
 import mcp.client.stdio
-from mcp.types import ListToolsResult
+from mcp.types import ListToolsResult, CallToolResult
 # from openai import AsyncOpenAI
 from dataclasses import dataclass, field
 
@@ -33,13 +33,17 @@ from pydantic import BaseModel
 from rich import print as rprint
 
 import shlex
-# from utils import pretty
-import utils.info
-from utils.pretty import log_title
-import utils
-import utils.pretty
+from .utils import pretty
+# import utils.info
+from .utils import info
+from .utils.pretty import log_title
 
-import try_mcp_client
+from . import utils
+# from . import utils.pretty
+# import .utils.pretty
+
+# import try_mcp_client
+from ...my import try_mcp_client
 
 load_dotenv()  # 读取.env里的API等信息
 # 直接从chat_openai.py里拿过来 from import
@@ -76,7 +80,10 @@ class MCPClient:
             tools: 从服务器获取的工具列表
         """
         # MCP 会话管理
-        self.session: mcp.client.session.ClientSession | None
+        # self.session: mcp.client.session.ClientSession | None
+        # # 声明“session”被同名声明遮盖PylancereportRedeclaration
+        # # mcp_client.py(127, 18): 查看变量声明
+        
         # self.session: typing.Optional[mcp.client.session.ClientSession] = None # `Optional[X]` 等价于 `X | None`
         self.exit_stack: contextlib.AsyncExitStack = contextlib.AsyncExitStack()
         
@@ -147,7 +154,10 @@ class MCPClient:
         await self.exit_stack.aclose()
         print("🔌 MCP client connection closed")
     
-    async def call_tool(self, name: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def call_tool(
+            self, name: str, params: Dict[str, Any]
+    # ) -> Dict[str, Any]:
+    ) -> CallToolResult:
         """调用服务器上的特定工具
         
         Args:
@@ -163,7 +173,8 @@ class MCPClient:
         if self.session is None:
             raise ValueError("Not connected to server")
         try:
-            result: Dict[str, Any] = await self.session.call_tool(name, params)
+            # result: Dict[str, Any] = await self.session.call_tool(name, params)
+            result: CallToolResult = await self.session.call_tool(name, params)
             return result
         except Exception as error:
             raise ValueError(f"Tool call failed for {name}: {error}") from error

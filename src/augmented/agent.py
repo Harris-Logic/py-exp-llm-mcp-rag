@@ -7,7 +7,7 @@ from rich import print as rprint  # 美化输出打印
 
 # 导入自定义模块
 from augmented.chat_openai import AsyncChatOpenAI  # 异步OpenAI聊天客户端
-from augmented._client import MCPClient  # MCP客户端
+from augmented.mcp_client import MCPClient  # MCP客户端
 from augmented.mcp_tools import PresetMcpTools  # 预设MCP工具
 from augmented.utils import pretty  # 美化工具
 from augmented.utils.info import DEFAULT_MODEL_NAME, PROJECT_ROOT_DIR  # 默认配置

@@ -20,7 +20,7 @@ augmented 包初始化文件
 # 导出主要的类和函数
 from .chat_openai import AsyncChatOpenAI, ChatOpenAIChatResponse
 from .agent import Agent
-from ._client import MCPClient
+from .mcp_client import MCPClient
 from .mcp_tools import PresetMcpTools, McpToolInfo
 from .embedding_retriever import EembeddingRetriever
 from .vector_store import VectorStore, VectorStoreItem

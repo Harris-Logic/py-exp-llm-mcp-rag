@@ -1,253 +1,146 @@
 """
 modified from https://modelcontextprotocol.io/quickstart/client  in tab 'python'
+MCP客户端实现，基于Model Context Protocol官方示例修改
 """
-import asyncio
-from contextlib import AsyncExitStack
-import contextlib
-import os
-# typing模块中的类型注解说明：
-# List: 来自typing模块的泛型类型，用于类型注解，支持指定元素类型，如List[str]
-# list: Python内置的列表类型，实际的数据结构
-# 区别：List用于类型提示，list用于创建实际对象
-# 在Python 3.9+中，可以直接用 list[str] 替代 List[str]
-from typing import Optional, List, Dict, Any, Tuple
-import typing
-from mcp import Tool, ClientSession, StdioServerParameters
-# import mcp.cli
-import mcp.client
-import mcp.client.session
-from mcp.client.stdio import stdio_client
-import mcp
-import mcp.client.stdio
-from mcp.types import ListToolsResult, CallToolResult
-# from openai import AsyncOpenAI
-from dataclasses import dataclass, field
 
-from openai.types import FunctionDefinition
-from openai.types.chat import (
-    ChatCompletionMessageParam,
-    ChatCompletionToolParam,
-)
-from dotenv import load_dotenv
-from pydantic import BaseModel
+import asyncio
+from typing import Any, Optional
+from contextlib import AsyncExitStack
+
+from mcp import ClientSession, StdioServerParameters, Tool
+from mcp.client.stdio import stdio_client
+
 from rich import print as rprint
 
-import shlex
-from .utils import pretty
-# import utils.info
-from .utils import info
-from .utils.pretty import log_title
+from dotenv import load_dotenv
 
-from . import utils
-# from . import utils.pretty
-# import .utils.pretty
+# from utils 
+from augmented.mcp_tools import PresetMcpTools
+from augmented.utils.info import PROJECT_ROOT_DIR
+from augmented.utils.pretty import RICH_CONSOLE
 
-# import try_mcp_client
-from ...my import try_mcp_client
+# 加载环境变量
+load_dotenv()
 
-load_dotenv()  # 读取.env里的API等信息
-# 直接从chat_openai.py里拿过来 from import
 
+# MCP客户端类，用于连接和管理MCP服务器
 class MCPClient:
-    """
-    MCP (Model Context Protocol) 客户端类
-    用于连接和管理与 MCP 服务器的通信，获取和调用服务器提供的工具
-    """
+    """MCP客户端，负责与MCP服务器建立连接、管理工具调用和资源清理"""
     
     def __init__(
-            self, 
-            name: str,
-            command: str,
-            args: List[str],
-            version: str = "1.0.0"
+        self,
+        name: str,
+        command: str,
+        args: list[str],
+        version: str = "0.0.1",
     ) -> None:
-        """
-        初始化 MCP 客户端
+        """初始化MCP客户端
         
         Args:
-            name: 客户端名称，用于标识当前客户端实例
-            command: 启动 MCP 服务器的命令路径（如: "node", "python", "npx" 等）
-            args: 传递给服务器命令的参数列表（如: ["server.js", "--port", "3000"]）
-            version: 客户端版本号，默认为 "1.0.0"
-        
-        Attributes:
-            session: MCP 客户端会话对象，用于与服务器通信
-            exit_stack: 异步上下文管理器，用于资源清理
-            name: 存储客户端名称
-            command: 存储服务器启动命令
-            args: 存储命令参数
-            version: 存储客户端版本
-            tools: 从服务器获取的工具列表
+            name: 客户端名称标识
+            command: MCP服务器启动命令
+            args: 命令参数列表
+            version: 客户端版本号
         """
-        # MCP 会话管理
-        # self.session: mcp.client.session.ClientSession | None
-        # # 声明“session”被同名声明遮盖PylancereportRedeclaration
-        # # mcp_client.py(127, 18): 查看变量声明
-        
-        # self.session: typing.Optional[mcp.client.session.ClientSession] = None # `Optional[X]` 等价于 `X | None`
-        self.exit_stack: contextlib.AsyncExitStack = contextlib.AsyncExitStack()
-        
-        # 客户端基本信息
-        self.name: str = name                    # 客户端标识名称
-        self.command: str = command              # 服务器启动命令（如: "node", "python"）
-        self.args: typing.List[str] = args              # 命令参数列表
-        self.version: str = version              # 客户端版本号
-        
-        # 工具管理
-        self.tools: typing.List[Tool] = []              # 存储从服务器获取的可用工具列表
-    
+        self.session: Optional[ClientSession] = None  # MCP会话对象
+        self.exit_stack = AsyncExitStack()  # 异步上下文管理器栈，用于资源清理
+        self.name = name  # 客户端名称
+        self.version = version  # 客户端版本
+        self.command = command  # 服务器启动命令
+        self.args = args  # 命令参数列表
+        self.tools: list[Tool] = []  # 从服务器获取的工具列表
+
+    # 初始化客户端连接
     async def init(self) -> None:
-        """初始化客户端，连接到服务器"""
-        await self.connect_to_server()
-        
-    async def connect_to_server(self) -> None:
-        """连接到MCP服务器
-        
-        创建与MCP服务器的连接，初始化会话，并获取服务器提供的工具列表
-        
-        Raises:
-            ConnectionError: 如果连接服务器失败
-            ValueError: 如果服务器响应无效
-        """
+        """初始化客户端，连接到MCP服务器"""
+        await self._connect_to_server()
+
+    # 清理客户端资源
+    async def cleanup(self) -> None:
+        """清理客户端资源，关闭与服务器的连接"""
         try:
-            # 创建服务器参数配置
-            server_params: mcp.client.stdio.StdioServerParameters = StdioServerParameters(
-                command=self.command,
-                args=self.args,
-                env=None
-            )
-            
-            # 创建标准输入输出传输通道
-            stdio_transport: typing.Tuple[Any, Any] = await self.exit_stack.enter_async_context(
-                mcp.client.stdio.stdio_client(server_params)
-            )
-            # 获取读写接口
-            # self.stdio: Any
-            # self.write: Any
-            self.stdio, self.write = stdio_transport
-            
-            # 创建客户端会话
-            self.session: mcp.client.session.ClientSession = await self.exit_stack.enter_async_context(
-                ClientSession(self.stdio, self.write)
-            )
-            
-            # 初始化会话
-            await self.session.initialize()
-            
-            # 获取服务器提供的工具列表
-            response: mcp.types.ListToolsResult = await self.session.list_tools()
-            self.tools: List[Tool] = response.tools
-            
-            # 打印连接成功信息和可用工具
-            rprint(f"\n✅ Connected to MCP server: ") #{self.name}
-            # tool_names = []
-            # for tool in self.tools:
-            #     tool_names.append(tool.name)
-            rprint("Available tools:", [tool.name for tool in self.tools])
-            
-        except Exception as error:
-            rprint(f"❌ Failed to connect to MCP server: {error}")
-            raise ConnectionError(f"Failed to connect to MCP server: {error}") from error
-    
-    async def close(self) -> None:
-        """清理资源，关闭与服务器的连接"""
-        await self.exit_stack.aclose()
-        print("🔌 MCP client connection closed")
-    
+            await self.exit_stack.aclose()  # 关闭所有异步上下文
+        except Exception:
+            rprint("Error during MCP client cleanup, traceback and continue!")
+            RICH_CONSOLE.print_exception()  # 打印异常信息但继续执行
+
+    # 获取工具列表
+    def get_tools(self) -> list[Tool]:
+        """返回从服务器获取的可用工具列表"""
+        return self.tools
+
+    # 连接到MCP服务器
+    async def _connect_to_server(
+        self,
+    ) -> None:
+        """连接到MCP服务器，建立会话并获取可用工具"""
+        # 配置服务器参数
+        server_params = StdioServerParameters(
+            command=self.command,  # 服务器启动命令
+            args=self.args,  # 命令参数
+        )
+
+        # 创建标准输入输出传输通道
+        stdio_transport = await self.exit_stack.enter_async_context(
+            stdio_client(server_params),  # 创建stdio客户端
+        )
+        self.stdio, self.write = stdio_transport  # 获取读写接口
+        
+        # 创建客户端会话
+        self.session = await self.exit_stack.enter_async_context(
+            ClientSession(self.stdio, self.write)  # 创建会话对象
+        )
+
+        # 初始化会话
+        await self.session.initialize()
+
+        # 获取服务器提供的工具列表
+        response = await self.session.list_tools()
+        self.tools = response.tools  # 存储工具列表
+        # 打印连接成功信息和可用工具
+        rprint("\nConnected to server with tools:", [tool.name for tool in self.tools])
+
+    # 调用工具方法
     async def call_tool(
-            self, name: str, params: Dict[str, Any]
-    # ) -> Dict[str, Any]:
-    ) -> CallToolResult:
-        """调用服务器上的特定工具
+            self, 
+            name: str,
+            params: dict[str, Any]
+    ):
+        """调用MCP服务器上的特定工具
         
         Args:
             name: 工具名称
-            params: 工具参数
+            params: 工具参数字典
             
         Returns:
             工具调用结果
             
         Raises:
-            ValueError: 如果工具不存在或调用失败
+            RuntimeError: 如果会话未初始化
         """
         if self.session is None:
-            raise ValueError("Not connected to server")
-        try:
-            # result: Dict[str, Any] = await self.session.call_tool(name, params)
-            result: CallToolResult = await self.session.call_tool(name, params)
-            return result
-        except Exception as error:
-            raise ValueError(f"Tool call failed for {name}: {error}") from error
-    
-    def get_tools(self) -> List[Tool]:
-        """返回从服务器获取的工具列表
-        
-        Returns:
-            可用工具列表
-        """
-        return self.tools
-    
+            raise RuntimeError("MCP会话未初始化，请先调用init()方法")
+        return await self.session.call_tool(name, params)  # 调用服务器工具
+
+
+# 示例函数，演示MCP客户端的使用
 async def example() -> None:
-    """示例函数：演示如何连接和使用MCP客户端"""
-    
-    # 步骤1: 定义MCP服务器配置列表
-    # 配置两个不同的MCP服务器：文件系统服务器和网络请求服务器
-    # 
-    # 类型注解解释：List[Tuple[str, str]]
-    # - List: 来自typing模块的泛型类型，用于类型提示（Type Hinting）
-    # - list: Python内置类型，用于创建实际的列表对象，如 list() 或 []
-    # - List[Tuple[str, str]] 表示：这是一个列表，包含多个元组，每个元组包含两个字符串
-    # - 等价写法（Python 3.9+）: list[tuple[str, str]]
-    # - 实际创建对象使用的是 [] ，这是 list 类型的字面量语法
-    server_configs: List[Tuple[str, str]] = [
-        (
-            "filesystem",  # 服务器名称：文件系统操作服务器
-            f"npx -y @modelcontextprotocol/server-filesystem {utils.info.PROJECT_ROOT_DIR!s}",  # 启动命令：使用npx运行文件系统服务器，指定项目根目录
-        ),
-        (
-            "fetch",  # 服务器名称：HTTP请求服务器
-            "uvx mcp-server-fetch",  # 启动命令：使用uvx运行网络请求服务器
-        ),
-    ]
-    
-    # 步骤2: 遍历每个服务器配置，逐一连接和测试
-    for mcp_name, cmd in server_configs:
-        # 步骤2.1: 显示当前正在处理的服务器名称（用于日志分隔和识别）
-        utils.pretty.log_title(mcp_name)
-        
-        # 步骤2.2: 解析命令字符串为命令和参数列表
-        # 使用shlex.split()正确处理带空格和引号的命令行参数
-        parts: List[str] = shlex.split(cmd)
-        command: str = parts[0]      # 提取主命令（如：npx, uvx）
-        args: List[str] = parts[1:]  # 提取命令参数列表（如：['-y', '@modelcontextprotocol/server-filesystem', '/path/to/project']）
-        
-        # 步骤2.3: 创建MCP客户端实例
-        # 使用解析出的命令和参数初始化客户端对象
-        mcp_client: try_mcp_client.MCPClient = try_mcp_client.MCPClient(
-            mcp_name,
-            command,
-            args,
-            # name=mcp_name,    # 设置客户端名称
-            # command=command,  # 设置服务器启动命令
-            # args=args,        # 设置命令参数
-        )
-        
-        # 步骤2.4: 初始化客户端连接
-        # 异步连接到MCP服务器，建立通信会话并获取可用工具列表
-        await mcp_client.init()
-        
-        # 步骤2.5: 获取服务器提供的工具列表
-        # 从已连接的服务器获取所有可用的工具（函数/方法）
-        tools: List[Tool] = mcp_client.get_tools()
-        
-        # 步骤2.6: 显示获取到的工具信息
-        # 打印工具列表以便查看服务器提供的功能
-        rprint(tools)
-        
-        # 步骤2.7: 清理资源并关闭连接
-        # 异步关闭与服务器的连接，释放相关资源
-        await mcp_client.close()
+    """MCP客户端使用示例，演示如何连接和使用不同的MCP工具"""
+    # 遍历预设的MCP工具配置
+    for mcp_tool in [
+        PresetMcpTools.filesystem.append_mcp_params(f" {PROJECT_ROOT_DIR!s}"),  # 文件系统工具，配置项目根目录
+        PresetMcpTools.fetch,  # 网络抓取工具
+    ]:
+        rprint(mcp_tool.shell_cmd)  # 打印工具的命令行（用于调试）
+        # 创建MCP客户端实例
+        mcp_client = MCPClient(**mcp_tool.to_common_params())
+        await mcp_client.init()  # 初始化客户端连接
+        tools = mcp_client.get_tools()  # 获取可用工具列表
+        rprint(tools)  # 打印工具信息
+        await mcp_client.cleanup()  # 清理客户端资源
 
 
+# 程序主入口
 if __name__ == "__main__":
-    asyncio.run(example())
+    """程序主入口点，运行MCP客户端示例"""
+    asyncio.run(example())  # 运行异步示例函数

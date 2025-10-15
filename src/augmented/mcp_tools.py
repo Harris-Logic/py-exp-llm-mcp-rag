@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import os
 import shlex
-from typing import Self
+from typing import Self, Any
 
 from dotenv import load_dotenv
 
@@ -43,7 +43,7 @@ class McpToolInfo:
         return self  # 返回自身以支持链式调用
 
     # 转换为通用参数字典
-    def to_common_params(self) -> dict[str, str]:
+    def to_common_params(self) -> dict[str, Any]:
         """将工具配置转换为通用的参数字典"""
         command, *args = shlex.split(self.shell_cmd)  # 解析shell命令为命令和参数列表
         return dict(

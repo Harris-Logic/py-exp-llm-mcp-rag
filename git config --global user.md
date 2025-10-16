@@ -62,6 +62,8 @@ Connection closed by 198.18.1.16 port 22
 m@m-Virtual-Machine:~/py-exp-llm-mcp-rag$ git remote set-url origin git@github.com:Harris-Logic/py-exp-llm-mcp-rag.git
 m@m-Virtual-Machine:~/py-exp-llm-mcp-rag$ ssh -T git@github.com
 Connection closed by 198.18.1.16 port 22
+
+
 m@m-Virtual-Machine:~/py-exp-llm-mcp-rag$ git remote -v
 origin  git@github.com:Harris-Logic/py-exp-llm-mcp-rag.git (fetch)
 origin  git@github.com:Harris-Logic/py-exp-llm-mcp-rag.git (push)
@@ -69,4 +71,8 @@ m@m-Virtual-Machine:~/py-exp-llm-mcp-rag$ git remote set-url origin https://gith
 m@m-Virtual-Machine:~/py-exp-llm-mcp-rag$ git remote -v
 origin  https://github.com:Harris-Logic/py-exp-llm-mcp-rag.git (fetch)
 origin  https://github.com:Harris-Logic/py-exp-llm-mcp-rag.git (push)
+m@m-Virtual-Machine:~/py-exp-llm-mcp-rag$ git remote set-url origin https://github.com/Harris-Logic/py-exp-llm-mcp-rag.git
+m@m-Virtual-Machine:~/py-exp-llm-mcp-rag$ git remote -v
+origin  https://github.com/Harris-Logic/py-exp-llm-mcp-rag.git (fetch)
+origin  https://github.com/Harris-Logic/py-exp-llm-mcp-rag.git (push)
 m@m-Virtual-Machine:~/py-exp-llm-mcp-rag$ 
